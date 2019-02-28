@@ -5,33 +5,44 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using ESDWeather.Models;
+using System.Text.Encodings.Web;
+using ESDWeather.ViewModels;
+using System.Net.Http;
 
 namespace ESDWeather.Controllers
 {
     public class HomeController : Controller
     {
-        public IActionResult Index()
+        private static HttpClient client = new HttpClient();
+        public async Task<IActionResult> Index()
         {
-            return View();
+            WeatherAtLocationViewModel userWeather = new WeatherAtLocationViewModel();
+
+            string ip = Request.HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
+
+            ip = "68.186.11.102";
+
+            LocationModel userLocation = await LocationModel.FindLocationFromIP(ip, client);
+            WeatherModel locationWeather = await WeatherModel.FindWeatherFromLocation(userLocation.City, client);
+
+            userWeather.location = userLocation;
+            userWeather.weather = locationWeather;
+
+            return View(userWeather);
         }
 
-        public IActionResult About()
+        [HttpPost]
+        public async Task<IActionResult> Index(string location)
         {
-            ViewData["Message"] = "Your application description page.";
+            WeatherAtLocationViewModel searchedWeather = new WeatherAtLocationViewModel();
 
-            return View();
-        }
+            LocationModel searchedLocation = new LocationModel(location);
+            WeatherModel locationWeather = await WeatherModel.FindWeatherFromLocation(location, client);
 
-        public IActionResult Contact()
-        {
-            ViewData["Message"] = "Your contact page.";
+            searchedWeather.location = searchedLocation;
+            searchedWeather.weather = locationWeather;
 
-            return View();
-        }
-
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View(searchedWeather);
         }
     }
 }
